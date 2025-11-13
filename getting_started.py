@@ -18,41 +18,40 @@ def chain_of_thought():
 
 
 def search_wikipedia(query: str) -> list[str]:
-    # Try multiple search strategies
-    search_terms = [
-        "David Gregory physician castle",
-        "David Gregory Kinnairdy",
-        "David Gregory 1625 Scotland"
-    ]
+    import wikipedia
 
-    all_contexts = []
-    seen_titles = set()
+    try:
+        results = wikipedia.search(query, results=5)
+        contexts = []
 
-    for term in search_terms:
-        try:
-            results = wikipedia.search(term, results=3)
-            for title in results:
-                if title in seen_titles:
-                    continue
-                seen_titles.add(title)
+        for title in results:
+            try:
+                page = wikipedia.page(title, auto_suggest=False)
+                contexts.append(page.summary)
+            except:
+                continue
 
-                try:
-                    page = wikipedia.page(title, auto_suggest=False)
-                    # Get summary which is usually most relevant
-                    all_contexts.append(page.summary)
-                except:
-                    continue
-        except:
-            continue
-
-    return all_contexts[:3] if all_contexts else ["No relevant information found."]
+        return contexts[:10] if contexts else ["No information found."]
+    except:
+        return ["No information found."]
 
 
 def rag():
-    rag_model = dspy.ChainOfThought("context, question -> response")
+    # Step 1: Use LLM to generate better search queries
+    query_generator = dspy.ChainOfThought("question -> search_query: str")
 
     question = "What's the name of the castle that David Gregory inherited?"
-    result = rag_model(context=search_wikipedia(question), question=question)
+
+    # Let the LLM generate a better search query
+    search_result = query_generator(question=question)
+    print(f"Generated search query: {search_result.search_query}")
+
+    # Use that query to search
+    contexts = search_wikipedia(search_result.search_query)
+
+    # Now answer with the retrieved context
+    rag_model = dspy.ChainOfThought("context, question -> response")
+    result = rag_model(context=contexts, question=question)
     print(result)
 
 

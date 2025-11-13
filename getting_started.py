@@ -1,6 +1,7 @@
 import dspy
 from general_utils import get_secret
 import wikipedia
+from typing import Literal
 
 
 def set_model():
@@ -55,6 +56,22 @@ def rag():
     print(result)
 
 
+class Classify(dspy.Signature):
+    """Classify sentiment of a given sentence."""
+
+    sentence: str = dspy.InputField()
+    sentiment: Literal["positive", "negative", "neutral"] = dspy.OutputField()
+    confidence: float = dspy.OutputField()
+
+
+class ExtractInfo(dspy.Signature):
+    """Extract structured information from text."""
+    text: str = dspy.InputField()
+    title: str = dspy.OutputField()
+    headings: list[str] = dspy.OutputField()
+    entities: list[dict[str, str]] = dspy.OutputField(desc="a list of entities and their metadata")
+
+
 if __name__ == "__main__":
     set_model()
     dspy.configure()
@@ -62,9 +79,21 @@ if __name__ == "__main__":
     # print("Chain of Thought Example:")
     # chain_of_thought()
 
-    result = search_wikipedia("David Gregory")
-    print("Search Wikipedia Example:")
-    print(result)
+    # result = search_wikipedia("David Gregory")
+    # print("Search Wikipedia Example:")
+    # print(result)
+    #
+    # print("\nRAG Example:")
+    # rag()
 
-    print("\nRAG Example:")
-    rag()
+    # classify = dspy.Predict(Classify)
+    # result = classify(sentence="This book was super fun to read, though not the last chapter.")
+    # print("\nClassification Example:")
+    # print(result)
+
+    module = dspy.Predict(ExtractInfo)
+
+    text = "Apple Inc. announced its latest iPhone 14 today." \
+        "Introduction:\nThe CEO, Tim Cook, highlighted its new features in a press release."
+    response = module(text=text)
+    print(response)

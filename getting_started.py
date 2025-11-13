@@ -58,7 +58,6 @@ def rag():
 
 class Classify(dspy.Signature):
     """Classify sentiment of a given sentence."""
-
     sentence: str = dspy.InputField()
     sentiment: Literal["positive", "negative", "neutral"] = dspy.OutputField()
     confidence: float = dspy.OutputField()
@@ -72,12 +71,43 @@ class ExtractInfo(dspy.Signature):
     entities: list[dict[str, str]] = dspy.OutputField(desc="a list of entities and their metadata")
 
 
+class Outline(dspy.Signature):
+    """Outline a thorough overview of a topic."""
+    topic: str = dspy.InputField()
+    title: str = dspy.OutputField()
+    sections: list[str] = dspy.OutputField()
+    section_subheadings: dict[str, list[str]] = dspy.OutputField(desc="mapping from section headings to subheadings")
+
+
+class DraftSection(dspy.Signature):
+    """Draft a top-level section of an article."""
+    topic: str = dspy.InputField()
+    section_heading: str = dspy.InputField()
+    section_subheadings: list[str] = dspy.InputField()
+    content: str = dspy.OutputField(desc="markdown-formatted section")
+
+
+class DraftArticle(dspy.Module):
+    def __init__(self):
+        self.build_outline = dspy.ChainOfThought(Outline)
+        self.draft_section = dspy.ChainOfThought(DraftSection)
+
+    def forward(self, topic):
+        outline = self.build_outline(topic=topic)
+        sections = []
+        for heading, subheadings in outline.section_subheadings.items():
+            section, subheadings = f"## {heading}", [f"### {subheading}" for subheading in subheadings]
+            section = self.draft_section(topic=outline.title, section_heading=section, section_subheadings=subheadings)
+            sections.append(section.content)
+        return dspy.Prediction(title=outline.title, sections=sections)
+
+
 if __name__ == "__main__":
     set_model()
     dspy.configure()
 
-    # print("Chain of Thought Example:")
-    # chain_of_thought()
+    print("Chain of Thought Example:")
+    chain_of_thought()
 
     # result = search_wikipedia("David Gregory")
     # print("Search Wikipedia Example:")
@@ -86,14 +116,23 @@ if __name__ == "__main__":
     # print("\nRAG Example:")
     # rag()
 
-    # classify = dspy.Predict(Classify)
-    # result = classify(sentence="This book was super fun to read, though not the last chapter.")
-    # print("\nClassification Example:")
-    # print(result)
+    classify = dspy.Predict(Classify)
+    result = classify(sentence="This book was super fun to read, though not the last chapter.")
+    print("\nClassification Example:")
+    print(result)
 
-    module = dspy.Predict(ExtractInfo)
+    # module = dspy.Predict(ExtractInfo)
+    #
+    # text = "Apple Inc. announced its latest iPhone 14 today." \
+    #     "Introduction:\nThe CEO, Tim Cook, highlighted its new features in a press release."
+    # response = module(text=text)
+    # print(response)
 
-    text = "Apple Inc. announced its latest iPhone 14 today." \
-        "Introduction:\nThe CEO, Tim Cook, highlighted its new features in a press release."
-    response = module(text=text)
-    print(response)
+    # draft_article = DraftArticle()
+    # article = draft_article(topic="World Cup 2002")
+    # print("\nDraft Article Example:")
+    # # Break into title and sections
+    # print(f"# {article.title}\n")
+    # for section in article.sections:
+    #     print(section)
+    #     print("\n")

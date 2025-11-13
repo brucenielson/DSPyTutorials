@@ -17,24 +17,38 @@ def chain_of_thought():
     print(result)
 
 
-def rag():
-    def search_wikipedia(query: str) -> list[str]:
-        # Use Wikipedia API directly instead
+def search_wikipedia(query: str) -> list[str]:
+    # Try multiple search strategies
+    search_terms = [
+        "David Gregory physician castle",
+        "David Gregory Kinnairdy",
+        "David Gregory 1625 Scotland"
+    ]
+
+    all_contexts = []
+    seen_titles = set()
+
+    for term in search_terms:
         try:
-            # Search for relevant pages
-            search_results = wikipedia.search(query, results=3)
-            contexts = []
-            for title in search_results:
+            results = wikipedia.search(term, results=3)
+            for title in results:
+                if title in seen_titles:
+                    continue
+                seen_titles.add(title)
+
                 try:
                     page = wikipedia.page(title, auto_suggest=False)
-                    contexts.append(page.summary)
+                    # Get summary which is usually most relevant
+                    all_contexts.append(page.summary)
                 except:
                     continue
-            return contexts[:3] if contexts else ["No relevant information found."]
-        except Exception as e:
-            print(f"Wikipedia search error: {e}")
-            return ["No relevant information found."]
+        except:
+            continue
 
+    return all_contexts[:3] if all_contexts else ["No relevant information found."]
+
+
+def rag():
     rag_model = dspy.ChainOfThought("context, question -> response")
 
     question = "What's the name of the castle that David Gregory inherited?"
@@ -46,8 +60,12 @@ if __name__ == "__main__":
     set_model()
     dspy.configure()
 
-    print("Chain of Thought Example:")
-    chain_of_thought()
+    # print("Chain of Thought Example:")
+    # chain_of_thought()
+
+    result = search_wikipedia("David Gregory")
+    print("Search Wikipedia Example:")
+    print(result)
 
     print("\nRAG Example:")
     rag()

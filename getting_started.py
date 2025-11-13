@@ -106,8 +106,8 @@ if __name__ == "__main__":
     set_model()
     dspy.configure()
 
-    # print("Chain of Thought Example:")
-    # chain_of_thought()
+    print("Chain of Thought Example:")
+    chain_of_thought()
 
     # result = search_wikipedia("David Gregory")
     # print("Search Wikipedia Example:")

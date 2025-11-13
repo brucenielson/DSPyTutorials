@@ -1,5 +1,6 @@
 import dspy
 from general_utils import get_secret
+import wikipedia
 
 
 def set_model():
@@ -18,8 +19,21 @@ def chain_of_thought():
 
 def rag():
     def search_wikipedia(query: str) -> list[str]:
-        results = dspy.ColBERTv2(url="http://20.102.90.50:2017/wiki17_abstracts")(query, k=3)
-        return [x["text"] for x in results]
+        # Use Wikipedia API directly instead
+        try:
+            # Search for relevant pages
+            search_results = wikipedia.search(query, results=3)
+            contexts = []
+            for title in search_results:
+                try:
+                    page = wikipedia.page(title, auto_suggest=False)
+                    contexts.append(page.summary)
+                except:
+                    continue
+            return contexts[:3] if contexts else ["No relevant information found."]
+        except Exception as e:
+            print(f"Wikipedia search error: {e}")
+            return ["No relevant information found."]
 
     rag_model = dspy.ChainOfThought("context, question -> response")
 

@@ -1,5 +1,6 @@
 """
-Minimal DSPy + MIPROv2 example showing prompt evolution.
+DSPy + MIPROv2 example that clearly shows prompt evolution.
+Uses a harder task so optimization makes a visible difference.
 """
 
 import dspy
@@ -22,7 +23,6 @@ class RetryLM(dspy.LM):
                 return super().__call__(*args, **kwargs)
             except Exception as e:
                 if '429' in str(e) and attempt < max_retries - 1:
-                    # Extract retry delay from error message
                     import re
                     match = re.search(r'retry in (\d+\.?\d*)', str(e).lower())
                     delay = float(match.group(1)) if match else 2 ** attempt
@@ -34,51 +34,61 @@ class RetryLM(dspy.LM):
 lm = RetryLM("gemini/gemini-2.5-flash-lite", api_key=gemini_key)
 dspy.configure(lm=lm)
 
-# Signature
-class Classify(dspy.Signature):
-    """Classify sentiment of a sentence."""
+# Harder task: Classify with nuance detection
+class ClassifyNuanced(dspy.Signature):
+    """Classify sentiment, detecting mixed/neutral cases."""
     sentence: str = dspy.InputField()
     sentiment: Literal["positive", "negative", "neutral"] = dspy.OutputField()
 
-# Simple module (required for MIPROv2)
 class SentimentClassifier(dspy.Module):
     def __init__(self):
         super().__init__()
-        self.predictor = dspy.Predict(Classify)
+        self.predictor = dspy.Predict(ClassifyNuanced)
 
     def forward(self, sentence):
         return self.predictor(sentence=sentence)
 
-# Data (as Example objects - MIPROv2 requires this)
+# Harder dataset with mixed sentiments
 trainset = [
     dspy.Example(sentence="I loved this book!", sentiment="positive").with_inputs("sentence"),
-    dspy.Example(sentence="It was terrible.", sentiment="negative").with_inputs("sentence"),
-    dspy.Example(sentence="An average read.", sentiment="neutral").with_inputs("sentence"),
+    dspy.Example(sentence="It was terrible and boring.", sentiment="negative").with_inputs("sentence"),
+    dspy.Example(sentence="The book was okay, nothing special.", sentiment="neutral").with_inputs("sentence"),
+    dspy.Example(sentence="Great start but disappointing ending.", sentiment="neutral").with_inputs("sentence"),
+    dspy.Example(sentence="Not bad, could be better.", sentiment="neutral").with_inputs("sentence"),
 ]
 
 devset = [
-    dspy.Example(sentence="A brilliant novel!", sentiment="positive").with_inputs("sentence"),
-    dspy.Example(sentence="I fell asleep; boring.", sentiment="negative").with_inputs("sentence"),
+    dspy.Example(sentence="Amazing writing, though the plot dragged.", sentiment="neutral").with_inputs("sentence"),
+    dspy.Example(sentence="A masterpiece from start to finish!", sentiment="positive").with_inputs("sentence"),
+    dspy.Example(sentence="Boring and poorly written.", sentiment="negative").with_inputs("sentence"),
 ]
 
-# Metric
 def metric(example, pred, trace=None):
     return example.sentiment == pred.sentiment
 
-# Before optimization
-print("\n=== BEFORE OPTIMIZATION ===")
+# BEFORE optimization
+print("\n" + "="*60)
+print("BEFORE OPTIMIZATION")
+print("="*60)
 program = SentimentClassifier()
-test_ex = devset[0]
-result = program(sentence=test_ex.sentence)
-print(f"Input: {test_ex.sentence}")
-print(f"Predicted: {result.sentiment}, Expected: {test_ex.sentiment}")
 
-# Show initial prompt
-print("\n--- Initial Prompt ---")
+# Test and show initial instruction
+print(f"\n📋 Initial Instruction:")
+print(f'"{program.predictor.signature.__doc__}"')
+
+print(f"\n🧪 Testing on dev set:")
+for ex in devset:
+    result = program(sentence=ex.sentence)
+    correct = "✓" if result.sentiment == ex.sentiment else "✗"
+    print(f"  {correct} '{ex.sentence}' → {result.sentiment} (expected: {ex.sentiment})")
+
+print("\n📝 Full initial prompt (last call):")
 lm.inspect_history(n=1)
 
-# Optimize
-print("\n=== OPTIMIZING ===")
+# OPTIMIZE
+print("\n" + "="*60)
+print("OPTIMIZING WITH MIPROv2")
+print("="*60)
 optimizer = MIPROv2(metric=metric, auto="light")
 optimized = optimizer.compile(
     student=program,
@@ -86,12 +96,33 @@ optimized = optimizer.compile(
     valset=devset,
 )
 
-# After optimization
-print("\n=== AFTER OPTIMIZATION ===")
-result = optimized(sentence=test_ex.sentence)
-print(f"Input: {test_ex.sentence}")
-print(f"Predicted: {result.sentiment}, Expected: {test_ex.sentiment}")
+# AFTER optimization
+print("\n" + "="*60)
+print("AFTER OPTIMIZATION")
+print("="*60)
 
-# Show optimized prompt
-print("\n--- Optimized Prompt ---")
+# Show optimized instruction
+print(f"\n📋 Optimized Instruction:")
+if hasattr(optimized, 'predictor'):
+    optimized_instruction = optimized.predictor.signature.__doc__
+    print(f'"{optimized_instruction}"')
+
+    # Highlight the change
+    original_instruction = program.predictor.signature.__doc__
+    if optimized_instruction != original_instruction:
+        print(f"\n✨ INSTRUCTION CHANGED! ✨")
+        print(f"\nOriginal: {original_instruction}")
+        print(f"\nOptimized: {optimized_instruction}")
+    else:
+        print("\n(Instruction stayed the same)")
+
+print(f"\n🧪 Testing optimized version on dev set:")
+for ex in devset:
+    result = optimized(sentence=ex.sentence)
+    correct = "✓" if result.sentiment == ex.sentiment else "✗"
+    print(f"  {correct} '{ex.sentence}' → {result.sentiment} (expected: {ex.sentiment})")
+
+print("\n📝 Full optimized prompt (last call):")
 lm.inspect_history(n=1)
+
+print("\n" + "="*60)

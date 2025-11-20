@@ -103,11 +103,11 @@ class DraftArticle(dspy.Module):
 
 
 if __name__ == "__main__":
-    set_model()
-    dspy.configure()
+    lm = set_model()
+    # dspy.configure()
 
-    print("Chain of Thought Example:")
-    chain_of_thought()
+    # print("Chain of Thought Example:")
+    # chain_of_thought()
 
     # result = search_wikipedia("David Gregory")
     # print("Search Wikipedia Example:")
@@ -120,6 +120,7 @@ if __name__ == "__main__":
     result = classify(sentence="This book was super fun to read, though not the last chapter.")
     print("\nClassification Example:")
     print(result)
+    print(lm.inspect_history(n=1))
 
     # module = dspy.Predict(ExtractInfo)
     #

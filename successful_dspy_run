@@ -1,0 +1,371 @@
+D:\Documents\AI\DSPyTutorials\.venv\Scripts\python.exe D:\Documents\AI\DSPyTutorials\dspy_optimizing.py
+
+============================================================
+BEFORE OPTIMIZATION
+============================================================
+
+📋 Initial Instruction:
+"Process the input."
+
+🎭 INVERTED Nonsense Categories (counterintuitive!):
+   'Oink!'   = positive sentiment (opposite of what you'd expect!)
+   'Bingo!'  = neutral/mixed sentiment (not positive!)
+   'Hmmm...' = negative sentiment (not thoughtful!)
+
+The model will naturally guess WRONG without training!
+
+🧪 Testing on dev set (without optimization):
+  ✗ 'The first half was amazing but then it fell a...' → Hmmm...  (expected: Bingo!)
+  ✗ 'Not terrible but nothing special....' → Hmmm...  (expected: Bingo!)
+  ✗ 'An absolute masterpiece in every way!...' → Bingo!   (expected: Oink!)
+  ✓ 'I wanted to like it but it was just awful....' → Hmmm...  (expected: Hmmm...)
+  ✗ 'Has its moments but overall just average....' → Hmmm...  (expected: Bingo!)
+
+📊 Initial accuracy: 1/5 (20%)
+    ↑ Should be near random chance (~33%) with no instruction!
+
+📝 Full initial prompt (last call):
+
+
+
+
+[2025-11-20T15:31:00.588827]
+
+System message:
+
+Your input fields are:
+1. `text` (str): input data
+Your output fields are:
+1. `label` (Literal['Bingo!', 'Hmmm...', 'Oink!']): output
+All interactions will be structured in the following way, with the appropriate values filled in.
+
+[[ ## text ## ]]
+{text}
+
+[[ ## label ## ]]
+{label}        # note: the value you produce must exactly match (no extra characters) one of: Bingo!; Hmmm...; Oink!
+
+[[ ## completed ## ]]
+In adhering to this structure, your objective is:
+        Process the input.
+
+
+User message:
+
+[[ ## text ## ]]
+Has its moments but overall just average.
+
+Respond with the corresponding output fields, starting with the field `[[ ## label ## ]]` (must be formatted as a valid Python Literal['Bingo!', 'Hmmm...', 'Oink!']), and then ending with the marker for `[[ ## completed ## ]]`.
+
+
+Response:
+
+[[ ## label ## ]]
+Hmmm...
+[[ ## completed ## ]]
+
+
+
+
+
+
+============================================================
+OPTIMIZING WITH MIPROv2
+============================================================
+The optimizer will learn the INVERTED mapping:
+  • 'Oink!' actually means POSITIVE (not negative!)
+  • 'Bingo!' actually means NEUTRAL (not positive!)
+  • 'Hmmm...' actually means NEGATIVE (not neutral!)
+
+This will take a few minutes...
+2025/11/20 15:31:00 INFO dspy.teleprompt.mipro_optimizer_v2:
+RUNNING WITH THE FOLLOWING LIGHT AUTO RUN SETTINGS:
+num_trials: 10
+minibatch: False
+num_fewshot_candidates: 6
+num_instruct_candidates: 3
+valset size: 5
+
+2025/11/20 15:31:00 INFO dspy.teleprompt.mipro_optimizer_v2:
+==> STEP 1: BOOTSTRAP FEWSHOT EXAMPLES <==
+2025/11/20 15:31:00 INFO dspy.teleprompt.mipro_optimizer_v2: These will be used as few-shot example candidates for our program and for creating instructions.
+
+2025/11/20 15:31:00 INFO dspy.teleprompt.mipro_optimizer_v2: Bootstrapping N=6 sets of demonstrations...
+  0%|          | 0/10 [00:00<?, ?it/s]Bootstrapping set 1/6
+Bootstrapping set 2/6
+Bootstrapping set 3/6
+ 60%|██████    | 6/10 [00:03<00:02,  1.64it/s]
+  0%|          | 0/10 [00:00<?, ?it/s]Bootstrapped 4 full traces after 6 examples for up to 1 rounds, amounting to 6 attempts.
+Bootstrapping set 4/6
+ 30%|███       | 3/10 [00:01<00:04,  1.65it/s]
+Bootstrapped 2 full traces after 3 examples for up to 1 rounds, amounting to 3 attempts.
+Bootstrapping set 5/6
+ 20%|██        | 2/10 [00:04<00:20,  2.62s/it]Rate limit hit, waiting 47.1s...
+100%|██████████| 10/10 [01:00<00:00,  6.02s/it]
+Bootstrapped 3 full traces after 9 examples for up to 1 rounds, amounting to 10 attempts.
+Bootstrapping set 6/6
+ 90%|█████████ | 9/10 [00:06<00:00,  1.42it/s]
+2025/11/20 15:32:12 INFO dspy.teleprompt.mipro_optimizer_v2:
+==> STEP 2: PROPOSE INSTRUCTION CANDIDATES <==
+2025/11/20 15:32:12 INFO dspy.teleprompt.mipro_optimizer_v2: We will use the few-shot examples from the previous step, a generated dataset summary, a summary of the program code, and a randomly selected prompting tip to propose instructions.
+Bootstrapped 4 full traces after 9 examples for up to 1 rounds, amounting to 9 attempts.
+class AnalyzeText(dspy.Signature):
+    """Process the input."""  # ← Useless instruction
+    text: str = dspy.InputField(desc="input data")
+    label: Literal["Bingo!", "Hmmm...", "Oink!"] = dspy.OutputField(desc="output")  # Shuffled order!
+
+Rate limit hit, waiting 45.2s...
+2025/11/20 15:33:05 INFO dspy.teleprompt.mipro_optimizer_v2:
+Proposing N=3 instructions...
+
+2025/11/20 15:33:20 INFO dspy.teleprompt.mipro_optimizer_v2: Proposed Instructions for Predictor 0:
+
+2025/11/20 15:33:20 INFO dspy.teleprompt.mipro_optimizer_v2: 0: Process the input.
+
+2025/11/20 15:33:20 INFO dspy.teleprompt.mipro_optimizer_v2: 1: You are a sentiment analysis model. Classify the given text into one of the following categories: "Oink!" for strongly positive, "Hmmm..." for negative, and "Bingo!" for mixed or neutral sentiments.
+
+2025/11/20 15:33:20 INFO dspy.teleprompt.mipro_optimizer_v2: 2: You are a text sentiment analysis model. Your task is to classify the given text into one of three categories: "Oink!" for strongly positive sentiments, "Hmmm..." for negative sentiments, and "Bingo!" for mixed or neutral sentiments.
+
+2025/11/20 15:33:20 INFO dspy.teleprompt.mipro_optimizer_v2:
+
+2025/11/20 15:33:20 INFO dspy.teleprompt.mipro_optimizer_v2: ==> STEP 3: FINDING OPTIMAL PROMPT PARAMETERS <==
+2025/11/20 15:33:20 INFO dspy.teleprompt.mipro_optimizer_v2: We will evaluate the program over a series of trials with different combinations of instructions and few-shot examples to find the optimal combination using Bayesian Optimization.
+
+2025/11/20 15:33:20 INFO dspy.teleprompt.mipro_optimizer_v2: == Trial 1 / 10 - Full Evaluation of Default Program ==
+Average Metric: 1.00 / 5 (20.0%): 100%|██████████| 5/5 [00:00<00:00, 236.61it/s]
+  0%|          | 0/5 [00:00<?, ?it/s]2025/11/20 15:33:20 INFO dspy.evaluate.evaluate: Average Metric: 1 / 5 (20.0%)
+2025/11/20 15:33:20 INFO dspy.teleprompt.mipro_optimizer_v2: Default program score: 20.0
+
+D:\Documents\AI\DSPyTutorials\.venv\Lib\site-packages\optuna\_experimental.py:32: ExperimentalWarning: Argument ``multivariate`` is an experimental feature. The interface can change in the future.
+  warnings.warn(
+2025/11/20 15:33:20 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 2 / 10 =====
+Average Metric: 3.00 / 3 (100.0%):  60%|██████    | 3/5 [00:01<00:00,  3.55it/s]Rate limit hit, waiting 36.9s...
+Rate limit hit, waiting 36.9s...
+Average Metric: 5.00 / 5 (100.0%): 100%|██████████| 5/5 [00:41<00:00,  8.26s/it]
+  0%|          | 0/5 [00:00<?, ?it/s]2025/11/20 15:34:02 INFO dspy.evaluate.evaluate: Average Metric: 5 / 5 (100.0%)
+2025/11/20 15:34:02 INFO dspy.teleprompt.mipro_optimizer_v2: Best full score so far! Score: 100.0
+2025/11/20 15:34:02 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3'].
+2025/11/20 15:34:02 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [20.0, 100.0]
+2025/11/20 15:34:02 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2025/11/20 15:34:02 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2025/11/20 15:34:02 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 3 / 10 =====
+Average Metric: 5.00 / 5 (100.0%): 100%|██████████| 5/5 [00:00<00:00,  6.86it/s]
+  0%|          | 0/5 [00:00<?, ?it/s]2025/11/20 15:34:02 INFO dspy.evaluate.evaluate: Average Metric: 5 / 5 (100.0%)
+2025/11/20 15:34:02 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
+2025/11/20 15:34:02 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [20.0, 100.0, 100.0]
+2025/11/20 15:34:02 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2025/11/20 15:34:02 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2025/11/20 15:34:02 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 4 / 10 =====
+Average Metric: 5.00 / 5 (100.0%): 100%|██████████| 5/5 [00:00<00:00,  6.78it/s]
+  0%|          | 0/5 [00:00<?, ?it/s]2025/11/20 15:34:03 INFO dspy.evaluate.evaluate: Average Metric: 5 / 5 (100.0%)
+2025/11/20 15:34:03 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 5'].
+2025/11/20 15:34:03 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [20.0, 100.0, 100.0, 100.0]
+2025/11/20 15:34:03 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2025/11/20 15:34:03 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2025/11/20 15:34:03 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 5 / 10 =====
+Average Metric: 3.00 / 3 (100.0%):  40%|████      | 2/5 [00:00<00:01,  1.73it/s]Rate limit hit, waiting 54.2s...
+Rate limit hit, waiting 54.2s...
+Average Metric: 5.00 / 5 (100.0%): 100%|██████████| 5/5 [00:58<00:00, 11.72s/it]
+2025/11/20 15:35:02 INFO dspy.evaluate.evaluate: Average Metric: 5 / 5 (100.0%)
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 2'].
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [20.0, 100.0, 100.0, 100.0, 100.0]
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 6 / 10 =====
+Average Metric: 5.00 / 5 (100.0%): 100%|██████████| 5/5 [00:00<00:00,  6.10it/s]
+2025/11/20 15:35:02 INFO dspy.evaluate.evaluate: Average Metric: 5 / 5 (100.0%)
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 0', 'Predictor 0: Few-Shot Set 5'].
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [20.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 7 / 10 =====
+Average Metric: 5.00 / 5 (100.0%): 100%|██████████| 5/5 [00:00<00:00, 309.70it/s]
+  0%|          | 0/5 [00:00<?, ?it/s]2025/11/20 15:35:02 INFO dspy.evaluate.evaluate: Average Metric: 5 / 5 (100.0%)
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 0'].
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [20.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2025/11/20 15:35:02 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 8 / 10 =====
+Average Metric: 5.00 / 5 (100.0%): 100%|██████████| 5/5 [00:00<00:00,  7.57it/s]
+2025/11/20 15:35:03 INFO dspy.evaluate.evaluate: Average Metric: 5 / 5 (100.0%)
+2025/11/20 15:35:03 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
+2025/11/20 15:35:03 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [20.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+2025/11/20 15:35:03 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2025/11/20 15:35:03 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2025/11/20 15:35:03 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 9 / 10 =====
+Average Metric: 3.00 / 3 (100.0%):  60%|██████    | 3/5 [00:00<00:00,  4.57it/s]Rate limit hit, waiting 54.1s...
+Rate limit hit, waiting 54.1s...
+Average Metric: 5.00 / 5 (100.0%): 100%|██████████| 5/5 [00:58<00:00, 11.75s/it]
+  0%|          | 0/5 [00:00<?, ?it/s]2025/11/20 15:36:02 INFO dspy.evaluate.evaluate: Average Metric: 5 / 5 (100.0%)
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 4'].
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [20.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: ========================
+
+
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 10 / 10 =====
+Average Metric: 5.00 / 5 (100.0%): 100%|██████████| 5/5 [00:00<00:00, 129.12it/s]
+2025/11/20 15:36:02 INFO dspy.evaluate.evaluate: Average Metric: 5 / 5 (100.0%)
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 2', 'Predictor 0: Few-Shot Set 5'].
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [20.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
+
+
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: ===== Trial 11 / 10 =====
+Average Metric: 5.00 / 5 (100.0%): 100%|██████████| 5/5 [00:00<00:00, 125.00it/s]
+
+============================================================
+AFTER OPTIMIZATION
+============================================================
+
+📋 Optimized Instruction:
+"You are a sentiment analysis model. Classify the given text into one of the following categories: "Oink!" for strongly positive, "Hmmm..." for negative, and "Bingo!" for mixed or neutral sentiments."
+
+✨ INSTRUCTION CHANGED! ✨
+
+  Before: 'Process the input.'
+
+  After:  'You are a sentiment analysis model. Classify the given text into one of the following categories: "Oink!" for strongly positive, "Hmmm..." for negative, and "Bingo!" for mixed or neutral sentiments.'
+
+  The optimizer learned the nonsense mapping!
+
+🧪 Testing optimized version on dev set:
+2025/11/20 15:36:02 INFO dspy.evaluate.evaluate: Average Metric: 5 / 5 (100.0%)
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: Score: 100.0 with parameters ['Predictor 0: Instruction 1', 'Predictor 0: Few-Shot Set 3'].
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: Scores so far: [20.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: Best score so far: 100.0
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: =========================
+
+
+2025/11/20 15:36:02 INFO dspy.teleprompt.mipro_optimizer_v2: Returning best identified program with score 100.0!
+  ✓ 'The first half was amazing but then it fell a...' → Bingo!   (expected: Bingo!)
+  ✓ 'Not terrible but nothing special....' → Bingo!   (expected: Bingo!)
+  ✓ 'An absolute masterpiece in every way!...' → Oink!    (expected: Oink!)
+  ✓ 'I wanted to like it but it was just awful....' → Hmmm...  (expected: Hmmm...)
+  ✓ 'Has its moments but overall just average....' → Bingo!   (expected: Bingo!)
+
+📊 Optimized accuracy: 5/5 (100%)
+    ↑ Should be much better now!
+
+📝 Full optimized prompt (last call):
+
+
+
+
+[2025-11-20T15:36:02.558559]
+
+System message:
+
+Your input fields are:
+1. `text` (str): input data
+Your output fields are:
+1. `label` (Literal['Bingo!', 'Hmmm...', 'Oink!']): output
+All interactions will be structured in the following way, with the appropriate values filled in.
+
+[[ ## text ## ]]
+{text}
+
+[[ ## label ## ]]
+{label}        # note: the value you produce must exactly match (no extra characters) one of: Bingo!; Hmmm...; Oink!
+
+[[ ## completed ## ]]
+In adhering to this structure, your objective is:
+        You are a sentiment analysis model. Classify the given text into one of the following categories: "Oink!" for strongly positive, "Hmmm..." for negative, and "Bingo!" for mixed or neutral sentiments.
+
+
+User message:
+
+[[ ## text ## ]]
+Complete waste of time.
+
+
+Assistant message:
+
+[[ ## label ## ]]
+Hmmm...
+
+[[ ## completed ## ]]
+
+
+User message:
+
+[[ ## text ## ]]
+Boring from start to finish.
+
+
+Assistant message:
+
+[[ ## label ## ]]
+Hmmm...
+
+[[ ## completed ## ]]
+
+
+User message:
+
+[[ ## text ## ]]
+I absolutely loved it!
+
+
+Assistant message:
+
+[[ ## label ## ]]
+Oink!
+
+[[ ## completed ## ]]
+
+
+User message:
+
+[[ ## text ## ]]
+Exceeded all my expectations!
+
+
+Assistant message:
+
+[[ ## label ## ]]
+Oink!
+
+[[ ## completed ## ]]
+
+
+User message:
+
+[[ ## text ## ]]
+Has its moments but overall just average.
+
+Respond with the corresponding output fields, starting with the field `[[ ## label ## ]]` (must be formatted as a valid Python Literal['Bingo!', 'Hmmm...', 'Oink!']), and then ending with the marker for `[[ ## completed ## ]]`.
+
+
+Response:
+
+[[ ## label ## ]]
+Bingo!
+
+[[ ## completed ## ]]
+
+
+
+
+
+
+============================================================
+OPTIMIZATION COMPLETE!
+============================================================
+
+Process finished with exit code 0
